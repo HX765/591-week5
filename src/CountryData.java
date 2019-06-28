@@ -65,10 +65,10 @@ public class CountryData {
         long indiChina = popChina + popIndia;
         long totalPop = data.computeTotalPop();
 
-        //double average = (popChina + popIndia) * 1.0 / totalPop;
-        //System.out.println(average);
+        double average = (popChina + popIndia) * 1.0 / totalPop;
+        System.out.println(average);
 
-        System.out.println(indiChina * 1.0 / totalPop);
+        //System.out.println(indiChina * 1.0 / totalPop);
 
 
 
