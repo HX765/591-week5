@@ -1,10 +1,13 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 public class OccupationData {
     ArrayList<Occupation> list = new ArrayList<>();
+    private static final char DEFAULT_SEPARATOR = ',';
+    private static final char DEFAULT_QUOTE = '"';
 
     public OccupationData(String filename){
         File f = new File (filename);
@@ -12,14 +15,12 @@ public class OccupationData {
         try{
             sc = new Scanner(f);
             while(sc.hasNextLine()){
-                String row = sc.nextLine(); //Chief executives,11-1011,Line item,308.9,296.8,0.2,0.2,-12.1,-3.9,20.0
-                String title = row.substring(0, row.indexOf(",")); //Chief executives
-                String placeholder1 = substringComma(row, ","); //11-1011
-                String placeholder2 = substringComma(placeholder1, ","); //Line item
-                String data2016 = substringComma(placeholder2, ","); //308.9
-                String data2026 = substringComma(data2016, ","); //296.8
-                Occupation temp = new Occupation (title, Double.parseDouble(data2016), Double.parseDouble(data2026));
-                list.add(temp);
+                List<String> line = parseLine(sc.nextLine()); //Chief executives,308.9,296.8,0.2,0.2,-12.1,-3.9,20.0
+            	String title = line.get(0); //Chief executives
+                String data2016 = line.get(1); //308.9               
+                String data2026 = line.get(2); //296.8                
+                Occupation job = new Occupation (title, Double.parseDouble(data2016), Double.parseDouble(data2026));
+                list.add(job);
             }
 
 
@@ -28,16 +29,105 @@ public class OccupationData {
         }
     }
     
-    public String substringComma(String s, String c) {
-    	int indexOfComma = s.indexOf(c);
-    	String remainingString = s.substring(indexOfComma + 1);
-    	return remainingString.substring(0, remainingString.indexOf(c));
-    }
     
-   
-    public static void main (String[] args) {
-    	OccupationData data = new OccupationData("occupation.csv");
-    	ArrayList<Occupation> dataList = new ArrayList<Occupation>();
+    public static List<String> parseLine(String cvsLine) {
+        return parseLine(cvsLine, DEFAULT_SEPARATOR, DEFAULT_QUOTE);
+    }
+
+    public static List<String> parseLine(String cvsLine, char separators) {
+        return parseLine(cvsLine, separators, DEFAULT_QUOTE);
+    }
+
+    public static List<String> parseLine(String cvsLine, char separators, char customQuote) {
+
+        List<String> result = new ArrayList<>();
+
+        //if empty, return!
+        if (cvsLine == null && cvsLine.isEmpty()) {
+            return result;
+        }
+
+        if (customQuote == ' ') {
+            customQuote = DEFAULT_QUOTE;
+        }
+
+        if (separators == ' ') {
+            separators = DEFAULT_SEPARATOR;
+        }
+
+        StringBuffer curVal = new StringBuffer();
+        boolean inQuotes = false;
+        boolean startCollectChar = false;
+        boolean doubleQuotesInColumn = false;
+
+        char[] chars = cvsLine.toCharArray();
+
+        for (char ch : chars) {
+
+            if (inQuotes) {
+                startCollectChar = true;
+                if (ch == customQuote) {
+                    inQuotes = false;
+                    doubleQuotesInColumn = false;
+                } else {
+
+                    //Fixed : allow "" in custom quote enclosed
+                    if (ch == '\"') {
+                        if (!doubleQuotesInColumn) {
+                            curVal.append(ch);
+                            doubleQuotesInColumn = true;
+                        }
+                    } else {
+                        curVal.append(ch);
+                    }
+
+                }
+            } else {
+                if (ch == customQuote) {
+
+                    inQuotes = true;
+
+                    //Fixed : allow "" in empty quote enclosed
+                    if (chars[0] != '"' && customQuote == '\"') {
+                        curVal.append('"');
+                    }
+
+                    //double quotes in column will hit this!
+                    if (startCollectChar) {
+                        curVal.append('"');
+                    }
+
+                } else if (ch == separators) {
+
+                    result.add(curVal.toString());
+
+                    curVal = new StringBuffer();
+                    startCollectChar = false;
+
+                } else if (ch == '\r') {
+                    //ignore LF characters
+                    continue;
+                } else if (ch == '\n') {
+                    //the end, break!
+                    break;
+                } else {
+                    curVal.append(ch);
+                }
+            }
+
+        }
+
+        result.add(curVal.toString());
+
+        return result;
+    }
+
+    
+    
+    public static void main(String[] args) {
+    	
+    	OccupationData data = new OccupationData("Occupation.txt");
+    	ArrayList<Occupation> dataList = data.list;
     	double num2016 = 0;
     	double num2026 = 0;
     	double delta = -100.0;
@@ -48,14 +138,12 @@ public class OccupationData {
     		double deltatemp = num2026 - num2016;
     		if(deltatemp > delta) {
     			delta = deltatemp;
-    			jobMostIncrease = dataList.get(i).getTitle();
-    			
+    			jobMostIncrease = dataList.get(i).getTitle();	
     		}
-    	}
+    	}	
     	
     	System.out.println("Most increase job is " + jobMostIncrease);
     	System.out.println("Job increase from 2016 to 2026 is " + delta);
-    	
     	
     }
     
